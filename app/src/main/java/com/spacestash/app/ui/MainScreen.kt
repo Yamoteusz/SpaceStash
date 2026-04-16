@@ -33,11 +33,13 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import kotlinx.coroutines.launch
+import androidx.compose.material.icons.filled.LocationOn
 
 // Zmienione opcje menu: Home, Schowek (zamiast Ustawień), Kontakt
 sealed class BottomNavItem(val route: String, val title: String, val icon: ImageVector) {
     object Home : BottomNavItem("home", "Home", Icons.Default.Home)
     object Stash : BottomNavItem("stash", "Schowek", Icons.Default.Star)
+    object Map : BottomNavItem("map", "Mapa", Icons.Default.LocationOn) // Dodaj to
     object Contact : BottomNavItem("contact", "Kontakt", Icons.Default.Email)
 }
 
@@ -53,6 +55,7 @@ fun MainScreen() {
     val items = listOf(
         BottomNavItem.Home,
         BottomNavItem.Stash,
+        BottomNavItem.Map,
         BottomNavItem.Contact
     )
 
@@ -130,7 +133,8 @@ fun MainScreen() {
             ) {
                 // Uaktualnione ścieżki
                 composable(BottomNavItem.Home.route) { HomeScreen() }
-                composable(BottomNavItem.Stash.route) { StashScreen() } // Tutaj ładujemy nasz schowek
+                composable(BottomNavItem.Stash.route) { StashScreen() }
+                composable(BottomNavItem.Map.route) { MapScreen() }
                 composable(BottomNavItem.Contact.route) { ContactScreen() }
             }
         }
