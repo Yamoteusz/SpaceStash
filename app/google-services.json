@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "706049457942",
+    "project_id": "spacestash-612d4",
+    "storage_bucket": "spacestash-612d4.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:706049457942:android:cd3e96b6b64dbea407da37",
+        "android_client_info": {
+          "package_name": "com.spacestash.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCbuu74dZyWlC1qlmmfiEHF1amqycw7_No"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
