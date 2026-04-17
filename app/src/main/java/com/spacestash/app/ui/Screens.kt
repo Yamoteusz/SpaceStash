@@ -32,6 +32,17 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Card
 import androidx.compose.foundation.layout.*
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.result.PickVisualMediaRequest
+import android.content.Context
+import androidx.core.content.FileProvider
+import java.io.File
 
 @Composable
 fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
@@ -93,12 +104,50 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
                     Text("Czytaj więcej na stronie NASA")
                 }
 
-                val stashViewModel: StashViewModel = viewModel() // Dodaj ten import i inicjalizację
+                val stashViewModel: StashViewModel = viewModel()
+                // Stany do kontrolowania okienka i tekstu wpisywanego przez użytkownika
+                var showDialog by remember { mutableStateOf(false) }
+                var noteText by remember { mutableStateOf("") }
 
-                Button(onClick = {
-                    stashViewModel.addItem(state.data.title, state.data.url, state.data.date)
-                }) {
-                    Text("Dodaj do Stasha")
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Button(onClick = { showDialog = true }) {
+                    Text("Dodaj do Schowka")
+                }
+
+                // Logika wyskakującego okienka
+                if (showDialog) {
+                    AlertDialog(
+                        onDismissRequest = { showDialog = false },
+                        title = { Text("Zapisz w Schowku") },
+                        text = {
+                            OutlinedTextField(
+                                value = noteText,
+                                onValueChange = { noteText = it },
+                                label = { Text("Dodaj własną notatkę (opcjonalnie)") }
+                            )
+                        },
+                        confirmButton = {
+                            Button(onClick = {
+                                // Zapisujemy z notatką!
+                                stashViewModel.addItem(
+                                    title = state.data.title,
+                                    url = state.data.url,
+                                    date = state.data.date,
+                                    note = noteText
+                                )
+                                showDialog = false // Zamykamy okienko
+                                noteText = "" // Czyścimy pole na przyszłość
+                            }) {
+                                Text("Zapisz")
+                            }
+                        },
+                        dismissButton = {
+                            TextButton(onClick = { showDialog = false }) {
+                                Text("Anuluj")
+                            }
+                        }
+                    )
                 }
             }
         }
@@ -106,21 +155,72 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
 }
 @Composable
 fun StashScreen(viewModel: StashViewModel = viewModel()) {
-    // Odczyt danych z bazy Room
     val items by viewModel.allItems.collectAsState(initial = emptyList())
+    val context = LocalContext.current
+
+    // Stany do okienka
+    var showCustomDialog by remember { mutableStateOf(false) }
+    var customImageUri by remember { mutableStateOf("") }
+    var customTitle by remember { mutableStateOf("Moje odkrycie") }
+    var customNote by remember { mutableStateOf("") }
+
+    // Stan do trzymania tymczasowego linku aparatu
+    var tempCameraUri by remember { mutableStateOf<Uri?>(null) }
+
+    // Wyrzutnia Galerii
+    val galleryLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia()
+    ) { uri ->
+        if (uri != null) {
+            customImageUri = uri.toString()
+            showCustomDialog = true
+        }
+    }
+
+    // Wyrzutnia Aparatu
+    val cameraLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicture()
+    ) { success ->
+        if (success && tempCameraUri != null) {
+            customImageUri = tempCameraUri.toString()
+            showCustomDialog = true
+        }
+    }
 
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
         Text("Mój Kosmiczny Schowek", fontSize = 24.sp, fontWeight = FontWeight.Bold)
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Obsługa pustej listy zgodnie ze specyfikacją
+        // Dwa przyciski obok siebie
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceEvenly
+        ) {
+            Button(onClick = {
+                val uri = context.createImageFileUri()
+                tempCameraUri = uri
+                cameraLauncher.launch(uri)
+            }) {
+                Text("📷 Aparat")
+            }
+
+            Button(onClick = {
+                galleryLauncher.launch(
+                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                )
+            }) {
+                Text("🖼️ Galeria")
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
         if (items.isEmpty()) {
-            Text("Twój schowek jest pusty. Dodaj zdjęcia z ekranu Home!")
+            Text("Twój schowek jest pusty. Dodaj zdjęcia z ekranu Home, Galerii lub zrób zdjęcie Aparatem!")
         }
 
         LazyColumn {
-            // Funkcjonalność przeglądania zapisanych elementów
             items(items) { item ->
                 Card(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
                     Column(modifier = Modifier.padding(8.dp)) {
@@ -135,11 +235,9 @@ fun StashScreen(viewModel: StashViewModel = viewModel()) {
                         )
 
                         Spacer(modifier = Modifier.height(8.dp))
-
-                        // Wyświetlanie notatek użytkownika [cite: 5, 26]
+                        Text("Data: ${item.date}")
                         Text("Notatka: ${item.note}")
 
-                        // Przycisk usuwania z bazy (CRUD)
                         Button(onClick = { viewModel.deleteItem(item) }) {
                             Text("Usuń")
                         }
@@ -147,6 +245,49 @@ fun StashScreen(viewModel: StashViewModel = viewModel()) {
                 }
             }
         }
+    }
+
+    // Okienko zapisu
+    if (showCustomDialog) {
+        AlertDialog(
+            onDismissRequest = { showCustomDialog = false },
+            title = { Text("Zapisz własne zdjęcie") },
+            text = {
+                Column {
+                    OutlinedTextField(
+                        value = customTitle,
+                        onValueChange = { customTitle = it },
+                        label = { Text("Tytuł zdjęcia") }
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = customNote,
+                        onValueChange = { customNote = it },
+                        label = { Text("Twoja notatka") }
+                    )
+                }
+            },
+            confirmButton = {
+                Button(onClick = {
+                    viewModel.addItem(
+                        title = customTitle,
+                        url = customImageUri,
+                        date = "Własne",
+                        note = customNote
+                    )
+                    showCustomDialog = false
+                    customTitle = "Moje odkrycie"
+                    customNote = ""
+                }) {
+                    Text("Zapisz")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showCustomDialog = false }) {
+                    Text("Anuluj")
+                }
+            }
+        )
     }
 }
 
@@ -179,4 +320,11 @@ fun ContactScreen() {
             Text("Zadzwoń do nas")
         }
     }
+}
+
+fun Context.createImageFileUri(): Uri {
+    // Tworzy unikalny plik w folderze cache z aktualną datą
+    val file = File(cacheDir, "camera_image_${System.currentTimeMillis()}.jpg")
+    // Zwraca bezpieczny Uri przez nasz FileProvider
+    return FileProvider.getUriForFile(this, "${packageName}.fileprovider", file)
 }
