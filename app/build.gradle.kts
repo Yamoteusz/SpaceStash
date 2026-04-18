@@ -77,4 +77,7 @@ dependencies {
     implementation("androidx.datastore:datastore-preferences:1.0.0")
     // WorkManager do zadań w tle
     implementation("androidx.work:work-runtime-ktx:2.9.0")
+    // Baza danych czasu rzeczywistego (do tekstów i lajków)
+    implementation("com.google.firebase:firebase-firestore:24.11.0")
+    implementation("com.google.firebase:firebase-storage:20.3.0")
 }

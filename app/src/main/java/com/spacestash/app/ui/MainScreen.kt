@@ -6,8 +6,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.Star // Nowa ikonka dla Schowka
+import androidx.compose.material.icons.filled.Person // Nowy import dla ikonki społeczności!
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -33,13 +35,13 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import kotlinx.coroutines.launch
-import androidx.compose.material.icons.filled.LocationOn
 
-// Zmienione opcje menu: Home, Schowek (zamiast Ustawień), Kontakt
+// Zmienione opcje menu: Dodano Społeczność!
 sealed class BottomNavItem(val route: String, val title: String, val icon: ImageVector) {
     object Home : BottomNavItem("home", "Home", Icons.Default.Home)
     object Stash : BottomNavItem("stash", "Schowek", Icons.Default.Star)
-    object Map : BottomNavItem("map", "Mapa", Icons.Default.LocationOn) // Dodaj to
+    object Map : BottomNavItem("map", "Mapa", Icons.Default.LocationOn)
+    object Community : BottomNavItem("community", "Społeczność", Icons.Default.Person) // NOWE
     object Contact : BottomNavItem("contact", "Kontakt", Icons.Default.Email)
 }
 
@@ -52,10 +54,12 @@ fun MainScreen() {
     // Scope potrzebny do uruchamiania animacji wysuwania szuflady
     val scope = rememberCoroutineScope()
 
+    // Aktualna lista zakładek (dodano Społeczność)
     val items = listOf(
         BottomNavItem.Home,
         BottomNavItem.Stash,
         BottomNavItem.Map,
+        BottomNavItem.Community, // NOWE
         BottomNavItem.Contact
     )
 
@@ -131,10 +135,11 @@ fun MainScreen() {
                 startDestination = BottomNavItem.Home.route,
                 modifier = Modifier.padding(innerPadding)
             ) {
-                // Uaktualnione ścieżki
+                // Uaktualnione i uporządkowane ścieżki
                 composable(BottomNavItem.Home.route) { HomeScreen() }
                 composable(BottomNavItem.Stash.route) { StashScreen() }
                 composable(BottomNavItem.Map.route) { MapScreen() }
+                composable(BottomNavItem.Community.route) { CommunityScreen() } // Zmienione z surowego "community"
                 composable(BottomNavItem.Contact.route) { ContactScreen() }
             }
         }

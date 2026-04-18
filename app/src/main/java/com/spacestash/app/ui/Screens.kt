@@ -1,9 +1,11 @@
 package com.spacestash.app.ui
 
+import android.Manifest
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
@@ -20,14 +22,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
+import com.spacestash.app.domain.Post
 import kotlinx.coroutines.launch
 import java.io.File
-import android.Manifest
-import android.os.Build
-import androidx.core.content.ContextCompat
 
 @Composable
 fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
@@ -378,6 +379,160 @@ fun ContactScreen() {
             }
         }) {
             Text("Zadzwoń do nas")
+        }
+    }
+}
+
+@Composable
+fun CommunityScreen(viewModel: CommunityViewModel = viewModel()) {
+    val posts by viewModel.posts.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
+    val context = LocalContext.current
+
+    val userStore = remember { UserStore(context) }
+    val authorName by userStore.userNameFlow.collectAsState(initial = "Anonimowy Astronauta")
+
+    var showPostDialog by remember { mutableStateOf(false) }
+    var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
+    var postDescription by remember { mutableStateOf("") }
+
+    val galleryLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia()
+    ) { uri ->
+        if (uri != null) {
+            selectedImageUri = uri
+            showPostDialog = true
+        }
+    }
+
+    Scaffold(
+        floatingActionButton = {
+            FloatingActionButton(onClick = {
+                galleryLauncher.launch(
+                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                )
+            }) {
+                Text("➕", fontSize = 24.sp)
+            }
+        }
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+        ) {
+            if (isLoading) {
+                LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+            }
+
+            if (posts.isEmpty() && !isLoading) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text("Brak postów. Bądź pierwszy!")
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(16.dp)
+                ) {
+                    items(posts) { post ->
+                        // TUTAJ ZMIANA: Przekazujemy ID użytkownika i akcję lajkowania
+                        PostCard(
+                            post = post,
+                            currentUserId = viewModel.getCurrentUserId(),
+                            onLikeClick = { viewModel.toggleLike(post.id, post.likedBy) }
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    if (showPostDialog && selectedImageUri != null) {
+        AlertDialog(
+            onDismissRequest = {
+                showPostDialog = false
+                selectedImageUri = null
+            },
+            title = { Text("Nowy Post") },
+            text = {
+                Column {
+                    AsyncImage(
+                        model = selectedImageUri,
+                        contentDescription = null,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(200.dp)
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = postDescription,
+                        onValueChange = { postDescription = it },
+                        label = { Text("Dodaj kosmiczny opis...") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                Button(onClick = {
+                    viewModel.createPost(
+                        imageUri = selectedImageUri!!,
+                        description = postDescription,
+                        authorName = if (authorName.isNullOrEmpty()) "Anonimowy Astronauta" else authorName!!
+                    )
+                    showPostDialog = false
+                    selectedImageUri = null
+                    postDescription = ""
+                }) {
+                    Text("Opublikuj 🚀")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    showPostDialog = false
+                    selectedImageUri = null
+                }) {
+                    Text("Anuluj")
+                }
+            }
+        )
+    }
+}
+
+// TUTAJ ZMIANA: Nowa sygnatura funkcji PostCard z obsługą lajków
+@Composable
+fun PostCard(post: Post, currentUserId: String?, onLikeClick: () -> Unit) {
+    // Sprawdzamy, czy na liście lajkujących jest ID naszego użytkownika
+    val isLiked = currentUserId != null && post.likedBy.contains(currentUserId)
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(text = post.authorName, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+            Spacer(modifier = Modifier.height(8.dp))
+
+            AsyncImage(
+                model = post.imageUrl,
+                contentDescription = "Zdjęcie użytkownika",
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(250.dp)
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(text = post.description)
+
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                // KLIKALNE SERDUSZKO!
+                IconButton(onClick = onLikeClick) {
+                    Text(text = if (isLiked) "❤️" else "🤍", fontSize = 24.sp)
+                }
+                Text(text = "${post.likesCount}", fontWeight = FontWeight.Bold)
+            }
         }
     }
 }
