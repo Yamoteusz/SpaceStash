@@ -11,7 +11,6 @@ fun RootNavigation() {
     val rootNavController = rememberNavController()
     val auth = FirebaseAuth.getInstance()
 
-    // Jeśli użytkownik jest zalogowany, startDestination to "main", w przeciwnym razie "login"
     val startDest = if (auth.currentUser != null) "main" else "login"
 
     NavHost(navController = rootNavController, startDestination = startDest) {

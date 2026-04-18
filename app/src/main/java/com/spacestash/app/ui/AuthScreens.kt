@@ -34,7 +34,6 @@ fun LoginScreen(
     var password by remember { mutableStateOf("") }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
-    // Instancja Firebase
     val auth = FirebaseAuth.getInstance()
 
     Column(
@@ -64,7 +63,6 @@ fun LoginScreen(
             modifier = Modifier.fillMaxWidth()
         )
 
-        // Wyświetlanie błędu (jeśli wystąpił)
         errorMessage?.let {
             Spacer(modifier = Modifier.height(8.dp))
             Text(text = it, color = MaterialTheme.colorScheme.error)

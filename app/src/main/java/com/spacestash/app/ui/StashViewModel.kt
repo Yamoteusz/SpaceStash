@@ -11,12 +11,10 @@ import kotlinx.coroutines.launch
 class StashViewModel(application: Application) : AndroidViewModel(application) {
     private val dao = StashDatabase.getDatabase(application).stashDao()
 
-    // Pobieranie wszystkich zapisanych zdjęć jako strumień danych (Flow)
     val allItems: Flow<List<StashEntity>> = dao.getAllItems()
 
     fun addItem(title: String, url: String, date: String, note: String = "") {
         viewModelScope.launch {
-            // Teraz przekazujemy również notatkę do bazy!
             dao.insertItem(StashEntity(title = title, url = url, date = date, note = note))
         }
     }

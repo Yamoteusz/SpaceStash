@@ -1,4 +1,4 @@
-package com.spacestash.app.ui // Zmień, jeśli masz inny folder
+package com.spacestash.app.ui
 
 import android.content.Context
 import androidx.work.CoroutineWorker
@@ -10,8 +10,6 @@ class DailyReminderWorker(
 ) : CoroutineWorker(context, workerParams) {
 
     override suspend fun doWork(): Result {
-        // Tutaj dzieje się magia w tle!
-        // Wywołujemy naszego pomocnika, którego zrobiliśmy wcześniej
         val notificationHelper = NotificationHelper(applicationContext)
 
         notificationHelper.showNotification(
@@ -19,7 +17,6 @@ class DailyReminderWorker(
             message = "Dzisiejsze astronomiczne zdjęcie dnia (APOD) już czeka. Odkryj wszechświat! 🚀"
         )
 
-        // Mówimy systemowi, że zadanie wykonano pomyślnie
         return Result.success()
     }
 }

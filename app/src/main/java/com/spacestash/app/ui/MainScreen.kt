@@ -8,7 +8,7 @@ import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.Person // Nowy import dla ikonki społeczności!
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -36,12 +36,11 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import kotlinx.coroutines.launch
 
-// Zmienione opcje menu: Dodano Społeczność!
 sealed class BottomNavItem(val route: String, val title: String, val icon: ImageVector) {
     object Home : BottomNavItem("home", "Home", Icons.Default.Home)
     object Stash : BottomNavItem("stash", "Schowek", Icons.Default.Star)
     object Map : BottomNavItem("map", "Mapa", Icons.Default.LocationOn)
-    object Community : BottomNavItem("community", "Społeczność", Icons.Default.Person) // NOWE
+    object Community : BottomNavItem("community", "Społeczność", Icons.Default.Person)
     object Contact : BottomNavItem("contact", "Kontakt", Icons.Default.Email)
 }
 
@@ -49,28 +48,23 @@ sealed class BottomNavItem(val route: String, val title: String, val icon: Image
 @Composable
 fun MainScreen() {
     val navController = rememberNavController()
-    // Stan szuflady (otwarta/zamknięta)
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
-    // Scope potrzebny do uruchamiania animacji wysuwania szuflady
     val scope = rememberCoroutineScope()
 
-    // Aktualna lista zakładek (dodano Społeczność)
     val items = listOf(
         BottomNavItem.Home,
         BottomNavItem.Stash,
         BottomNavItem.Map,
-        BottomNavItem.Community, // NOWE
+        BottomNavItem.Community,
         BottomNavItem.Contact
     )
 
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
-    // ModalNavigationDrawer otacza całą naszą aplikację
     ModalNavigationDrawer(
         drawerState = drawerState,
         drawerContent = {
-            // Wygląd samego wysuwanego menu
             ModalDrawerSheet {
                 Spacer(Modifier.height(16.dp))
                 Text(text = "SpaceStash Menu", modifier = Modifier.padding(16.dp))
@@ -82,7 +76,7 @@ fun MainScreen() {
                         label = { Text(text = item.title) },
                         selected = currentRoute == item.route,
                         onClick = {
-                            scope.launch { drawerState.close() } // Zamyka menu po kliknięciu
+                            scope.launch { drawerState.close() }
                             navController.navigate(item.route) {
                                 popUpTo(navController.graph.findStartDestination().id) {
                                     saveState = true
@@ -99,7 +93,6 @@ fun MainScreen() {
     ) {
         Scaffold(
             topBar = {
-                // Górny pasek z ikoną do otwierania bocznego menu
                 TopAppBar(
                     title = { Text("SpaceStash") },
                     navigationIcon = {
@@ -135,11 +128,10 @@ fun MainScreen() {
                 startDestination = BottomNavItem.Home.route,
                 modifier = Modifier.padding(innerPadding)
             ) {
-                // Uaktualnione i uporządkowane ścieżki
                 composable(BottomNavItem.Home.route) { HomeScreen() }
                 composable(BottomNavItem.Stash.route) { StashScreen() }
                 composable(BottomNavItem.Map.route) { MapScreen() }
-                composable(BottomNavItem.Community.route) { CommunityScreen() } // Zmienione z surowego "community"
+                composable(BottomNavItem.Community.route) { CommunityScreen() }
                 composable(BottomNavItem.Contact.route) { ContactScreen() }
             }
         }

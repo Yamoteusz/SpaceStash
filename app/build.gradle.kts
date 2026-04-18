@@ -61,23 +61,17 @@ dependencies {
     implementation("androidx.navigation:navigation-compose:2.7.7")
     implementation(platform("com.google.firebase:firebase-bom:34.12.0"))
     implementation("com.google.firebase:firebase-auth")
-    // Retrofit do obsługi API i GSON do przetwarzania JSON-ów
     implementation("com.squareup.retrofit2:retrofit:2.9.0")
     implementation("com.squareup.retrofit2:converter-gson:2.9.0")
-    // Coil do ładowania obrazków prosto z linków internetowych
     implementation("io.coil-kt:coil-compose:2.6.0")
-    // Biblioteki Room (Lokalna Baza Danych)
     val room_version = "2.6.1"
     implementation("androidx.room:room-runtime:$room_version")
     implementation("androidx.room:room-ktx:$room_version")
     ksp("androidx.room:room-compiler:$room_version")
-    // Google Maps & Location
     implementation("com.google.maps.android:maps-compose:4.3.3")
     implementation("com.google.android.gms:play-services-location:21.2.0")
     implementation("androidx.datastore:datastore-preferences:1.0.0")
-    // WorkManager do zadań w tle
     implementation("androidx.work:work-runtime-ktx:2.9.0")
-    // Baza danych czasu rzeczywistego (do tekstów i lajków)
     implementation("com.google.firebase:firebase-firestore:24.11.0")
     implementation("com.google.firebase:firebase-storage:20.3.0")
 }

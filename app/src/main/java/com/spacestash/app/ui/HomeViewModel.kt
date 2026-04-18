@@ -10,32 +10,29 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-// Reprezentacja wszystkich możliwych stanów naszego ekranu
 sealed class HomeUiState {
-    object Initial : HomeUiState() // Zanim cokolwiek klikniemy
-    object Loading : HomeUiState() // Kółko ładowania
-    data class Success(val data: ApodResponse) : HomeUiState() // Gotowe dane z NASA
-    data class Error(val message: String) : HomeUiState() // Coś poszło nie tak
+    object Initial : HomeUiState()
+    object Loading : HomeUiState()
+    data class Success(val data: ApodResponse) : HomeUiState()
+    data class Error(val message: String) : HomeUiState()
 }
 
 class HomeViewModel : ViewModel() {
     private val repository = NasaRepository()
 
-    // Obiekt przechowujący aktualny stan ekranu
     private val _uiState = MutableStateFlow<HomeUiState>(HomeUiState.Initial)
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
 
     fun fetchApod(apiKey: String) {
-        _uiState.value = HomeUiState.Loading // Włączamy ładowanie
+        _uiState.value = HomeUiState.Loading
 
         viewModelScope.launch {
             try {
-                // Próbujemy pobrać dane z NASA
                 val response = repository.getPictureOfTheDay(apiKey)
-                _uiState.value = HomeUiState.Success(response) // Sukces!
+                _uiState.value = HomeUiState.Success(response)
             } catch (e: Exception) {
                 Log.e("HomeViewModel", "Błąd pobierania danych", e)
-                _uiState.value = HomeUiState.Error("Brak połączenia lub zły klucz API") // Błąd
+                _uiState.value = HomeUiState.Error("Brak połączenia lub zły klucz API")
             }
         }
     }

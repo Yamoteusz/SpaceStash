@@ -3,7 +3,6 @@ package com.spacestash.app.data
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
-// Klient API (Konfiguracja Retrofit)
 object ApiClient {
     private const val BASE_URL = "https://api.nasa.gov/"
 
@@ -16,7 +15,6 @@ object ApiClient {
     }
 }
 
-// Repozytorium (Pośrednik do pobierania danych)
 class NasaRepository {
     private val apiService = ApiClient.retrofitService
 

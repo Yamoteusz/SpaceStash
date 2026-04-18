@@ -19,14 +19,12 @@ import com.google.maps.android.compose.*
 @Composable
 fun MapScreen() {
     val context = LocalContext.current
-    // Współrzędne Twojej bazy / uczelni (np. Politechnika Warszawska)
     val universityPos = LatLng(51.107350, 16.983792)
 
     val cameraPositionState = rememberCameraPositionState {
         position = CameraPosition.fromLatLngZoom(universityPos, 18f)
     }
 
-    // Stan uprawnień
     var hasLocationPermission by remember {
         mutableStateOf(
             ContextCompat.checkSelfPermission(
@@ -36,7 +34,6 @@ fun MapScreen() {
         )
     }
 
-    // Launcher do prośby o uprawnienia
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { isGranted ->
@@ -58,7 +55,6 @@ fun MapScreen() {
                 )
             }
         } else {
-            // Widok, gdy nie ma uprawnień
             Column(
                 modifier = Modifier.fillMaxSize(),
                 horizontalAlignment = Alignment.CenterHorizontally,

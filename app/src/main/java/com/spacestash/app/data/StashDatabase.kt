@@ -5,7 +5,7 @@ import androidx.room.*
 import kotlinx.coroutines.flow.Flow
 
 @Dao
-@JvmSuppressWildcards // <-- TO JEST TEN MAGICZNY PLASTER
+@JvmSuppressWildcards
 interface StashDao {
     @Query("SELECT * FROM stash_table ORDER BY id DESC")
     fun getAllItems(): Flow<List<StashEntity>>

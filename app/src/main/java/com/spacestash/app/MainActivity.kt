@@ -16,23 +16,18 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // --- HARMONOGRAM POWIADOMIEŃ W TLE (WORKMANAGER) ---
-        // Ustawiamy zadanie, które ma się odpalać co 24 godziny
         val dailyWorkRequest = PeriodicWorkRequestBuilder<DailyReminderWorker>(24, TimeUnit.HOURS)
             .build()
 
-        // Zlecamy systemowi Android czuwanie nad tym zadaniem
         WorkManager.getInstance(applicationContext).enqueueUniquePeriodicWork(
             "DailyApodReminder",
-            ExistingPeriodicWorkPolicy.KEEP, // Jeśli zadanie już istnieje, nie nadpisuj go
+            ExistingPeriodicWorkPolicy.KEEP,
             dailyWorkRequest
         )
-        // ---------------------------------------------------
 
         enableEdgeToEdge()
         setContent {
             SpaceStashTheme {
-                // Uruchamiamy zarządzanie głównym widokiem
                 RootNavigation()
             }
         }

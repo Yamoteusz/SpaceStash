@@ -35,27 +35,23 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
 
-    // --- NOWY KOD DLA DATASTORE ---
     val userStore = remember { UserStore(context) }
     val scope = rememberCoroutineScope()
 
-    // initial = null oznacza, że aplikacja "jeszcze ładuje" plik
     val savedName by userStore.userNameFlow.collectAsState(initial = null)
 
     var showNameDialog by remember { mutableStateOf(false) }
     var tempName by remember { mutableStateOf("") }
 
     LaunchedEffect(savedName) {
-        // Jeśli plik się załadował i faktycznie jest puste ("", a nie null)
         if (savedName == "") {
             showNameDialog = true
         }
     }
 
-    // Okienko do podania imienia
     if (showNameDialog) {
         AlertDialog(
-            onDismissRequest = { /* Nie pozwalamy zamknąć bez podania */ },
+            onDismissRequest = { },
             title = { Text("Witaj w SpaceStash!") },
             text = {
                 OutlinedTextField(
@@ -68,7 +64,7 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
                 Button(onClick = {
                     if (tempName.isNotBlank()) {
                         scope.launch {
-                            userStore.saveName(tempName) // Zapisujemy na stałe!
+                            userStore.saveName(tempName)
                         }
                         showNameDialog = false
                     }
@@ -79,13 +75,11 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
         )
     }
 
-    // Pobieranie naszego ukrytego klucza NASA z AndroidManifest.xml
     val apiKey = remember {
         val appInfo = context.packageManager.getApplicationInfo(context.packageName, PackageManager.GET_META_DATA)
         appInfo.metaData.getString("NASA_API_KEY") ?: "DEMO_KEY"
     }
 
-    // --- NOWY KOD DLA POWIADOMIEŃ ---
     val notificationHelper = remember { NotificationHelper(context) }
 
     val permissionLauncher = rememberLauncherForActivityResult(
@@ -105,8 +99,7 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        // --- OSOBISTE POWITANIE ---
-        if (!savedName.isNullOrEmpty()) { // Zmieniony warunek!
+        if (!savedName.isNullOrEmpty()) {
             Text(
                 text = "Witaj, $savedName! \uD83D\uDE80",
                 fontSize = 28.sp,
@@ -116,16 +109,13 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
             Spacer(modifier = Modifier.height(16.dp))
         }
 
-        // Przycisk Pobierz/Odśwież
         Button(onClick = { viewModel.fetchApod(apiKey) }) {
             Text("Pobierz / Odśwież Kosmiczne Zdjęcie")
         }
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // --- PRZYCISK TESTUJĄCY POWIADOMIENIA ---
         Button(onClick = {
-            // Android 13 (TIRAMISU) i nowsze wymagają pytania o zgodę
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 val isGranted = ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
                 if (isGranted) {
@@ -134,7 +124,6 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
                     permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
                 }
             } else {
-                // Starsze Androidy nie pytały o to okienkiem, po prostu wysyłamy
                 notificationHelper.showNotification("SpaceStash", "Misja gotowa do startu! 🚀")
             }
         }) {
@@ -142,7 +131,6 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
         }
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Reagowanie na stan z ViewModelu
         when (val state = uiState) {
             is HomeUiState.Initial -> Text("Kliknij przycisk, aby nawiązać łączność z NASA!")
             is HomeUiState.Loading -> CircularProgressIndicator()
@@ -435,10 +423,9 @@ fun CommunityScreen(viewModel: CommunityViewModel = viewModel()) {
                     contentPadding = PaddingValues(16.dp)
                 ) {
                     items(posts) { post ->
-                        // TUTAJ ZMIANA: Przekazujemy ID użytkownika i akcję lajkowania
                         PostCard(
                             post = post,
-                            currentUserId = viewModel.getCurrentUserId(),
+                            currentUserId = viewModel.getCurrentUserId() ?: "",
                             onLikeClick = { viewModel.toggleLike(post.id, post.likedBy) }
                         )
                     }
@@ -453,7 +440,7 @@ fun CommunityScreen(viewModel: CommunityViewModel = viewModel()) {
                 showPostDialog = false
                 selectedImageUri = null
             },
-            title = { Text("Nowy Post") },
+            title = { Text("Udostępnij swoje odkrycie") },
             text = {
                 Column {
                     AsyncImage(
@@ -467,23 +454,19 @@ fun CommunityScreen(viewModel: CommunityViewModel = viewModel()) {
                     OutlinedTextField(
                         value = postDescription,
                         onValueChange = { postDescription = it },
-                        label = { Text("Dodaj kosmiczny opis...") },
+                        label = { Text("Opisz co widzisz...") },
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
             },
             confirmButton = {
                 Button(onClick = {
-                    viewModel.createPost(
-                        imageUri = selectedImageUri!!,
-                        description = postDescription,
-                        authorName = if (authorName.isNullOrEmpty()) "Anonimowy Astronauta" else authorName!!
-                    )
+                    viewModel.createPost(selectedImageUri!!, postDescription, authorName ?: "Anonim")
                     showPostDialog = false
                     selectedImageUri = null
                     postDescription = ""
                 }) {
-                    Text("Opublikuj 🚀")
+                    Text("Wyślij")
                 }
             },
             dismissButton = {
@@ -498,46 +481,47 @@ fun CommunityScreen(viewModel: CommunityViewModel = viewModel()) {
     }
 }
 
-// TUTAJ ZMIANA: Nowa sygnatura funkcji PostCard z obsługą lajków
 @Composable
-fun PostCard(post: Post, currentUserId: String?, onLikeClick: () -> Unit) {
-    // Sprawdzamy, czy na liście lajkujących jest ID naszego użytkownika
-    val isLiked = currentUserId != null && post.likedBy.contains(currentUserId)
-
+fun PostCard(post: Post, currentUserId: String, onLikeClick: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 8.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        elevation = CardDefaults.cardElevation(4.dp)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(text = post.authorName, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+        Column(modifier = Modifier.padding(12.dp)) {
+            Text(text = post.authorName, fontWeight = FontWeight.Bold, fontSize = 16.sp)
             Spacer(modifier = Modifier.height(8.dp))
-
+            
             AsyncImage(
                 model = post.imageUrl,
-                contentDescription = "Zdjęcie użytkownika",
+                contentDescription = null,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(250.dp)
             )
-
+            
             Spacer(modifier = Modifier.height(8.dp))
             Text(text = post.description)
-
-            Spacer(modifier = Modifier.height(8.dp))
+            
+            Spacer(modifier = Modifier.height(12.dp))
+            
             Row(verticalAlignment = Alignment.CenterVertically) {
-                // KLIKALNE SERDUSZKO!
                 IconButton(onClick = onLikeClick) {
-                    Text(text = if (isLiked) "❤️" else "🤍", fontSize = 24.sp)
+                    val isLiked = post.likedBy.contains(currentUserId)
+                    Text(if (isLiked) "❤️" else "🤍", fontSize = 20.sp)
                 }
-                Text(text = "${post.likesCount}", fontWeight = FontWeight.Bold)
+                Text(text = "${post.likesCount} polubień")
             }
         }
     }
 }
 
 fun Context.createImageFileUri(): Uri {
-    val file = File(cacheDir, "camera_image_${System.currentTimeMillis()}.jpg")
-    return FileProvider.getUriForFile(this, "${packageName}.fileprovider", file)
+    val file = File(cacheDir, "camera_photo_${System.currentTimeMillis()}.jpg")
+    return FileProvider.getUriForFile(
+        this,
+        "${packageName}.fileprovider",
+        file
+    )
 }
