@@ -75,4 +75,6 @@ dependencies {
     implementation("com.google.maps.android:maps-compose:4.3.3")
     implementation("com.google.android.gms:play-services-location:21.2.0")
     implementation("androidx.datastore:datastore-preferences:1.0.0")
+    // WorkManager do zadań w tle
+    implementation("androidx.work:work-runtime-ktx:2.9.0")
 }

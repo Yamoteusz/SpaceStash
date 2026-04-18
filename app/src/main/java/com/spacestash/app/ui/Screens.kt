@@ -25,6 +25,9 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import kotlinx.coroutines.launch
 import java.io.File
+import android.Manifest
+import android.os.Build
+import androidx.core.content.ContextCompat
 
 @Composable
 fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
@@ -81,6 +84,19 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
         appInfo.metaData.getString("NASA_API_KEY") ?: "DEMO_KEY"
     }
 
+    // --- NOWY KOD DLA POWIADOMIEŃ ---
+    val notificationHelper = remember { NotificationHelper(context) }
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            notificationHelper.showNotification("SpaceStash", "Łączność nawiązana! Powiadomienia działają.")
+        } else {
+            Toast.makeText(context, "Brak zgody na powiadomienia", Toast.LENGTH_SHORT).show()
+        }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -105,6 +121,25 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
         }
 
         Spacer(modifier = Modifier.height(24.dp))
+
+        // --- PRZYCISK TESTUJĄCY POWIADOMIENIA ---
+        Button(onClick = {
+            // Android 13 (TIRAMISU) i nowsze wymagają pytania o zgodę
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                val isGranted = ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+                if (isGranted) {
+                    notificationHelper.showNotification("SpaceStash", "Misja gotowa do startu! 🚀")
+                } else {
+                    permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                }
+            } else {
+                // Starsze Androidy nie pytały o to okienkiem, po prostu wysyłamy
+                notificationHelper.showNotification("SpaceStash", "Misja gotowa do startu! 🚀")
+            }
+        }) {
+            Text("Wyślij sygnał testowy \uD83D\uDD14")
+        }
+        Spacer(modifier = Modifier.height(16.dp))
 
         // Reagowanie na stan z ViewModelu
         when (val state = uiState) {
