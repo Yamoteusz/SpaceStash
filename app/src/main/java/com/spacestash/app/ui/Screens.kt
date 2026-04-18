@@ -1,53 +1,79 @@
 package com.spacestash.app.ui
 
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.sp
-import android.content.pm.PackageManager
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
-import coil.compose.AsyncImage
+import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.Card
-import androidx.compose.foundation.layout.*
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.TextButton
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.activity.result.PickVisualMediaRequest
-import android.content.Context
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.core.content.FileProvider
+import androidx.lifecycle.viewmodel.compose.viewModel
+import coil.compose.AsyncImage
+import kotlinx.coroutines.launch
 import java.io.File
 
 @Composable
 fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
+
+    // --- NOWY KOD DLA DATASTORE ---
+    val userStore = remember { UserStore(context) }
+    val scope = rememberCoroutineScope()
+
+    // initial = null oznacza, że aplikacja "jeszcze ładuje" plik
+    val savedName by userStore.userNameFlow.collectAsState(initial = null)
+
+    var showNameDialog by remember { mutableStateOf(false) }
+    var tempName by remember { mutableStateOf("") }
+
+    LaunchedEffect(savedName) {
+        // Jeśli plik się załadował i faktycznie jest puste ("", a nie null)
+        if (savedName == "") {
+            showNameDialog = true
+        }
+    }
+
+    // Okienko do podania imienia
+    if (showNameDialog) {
+        AlertDialog(
+            onDismissRequest = { /* Nie pozwalamy zamknąć bez podania */ },
+            title = { Text("Witaj w SpaceStash!") },
+            text = {
+                OutlinedTextField(
+                    value = tempName,
+                    onValueChange = { tempName = it },
+                    label = { Text("Jak masz na imię, Dowódco?") }
+                )
+            },
+            confirmButton = {
+                Button(onClick = {
+                    if (tempName.isNotBlank()) {
+                        scope.launch {
+                            userStore.saveName(tempName) // Zapisujemy na stałe!
+                        }
+                        showNameDialog = false
+                    }
+                }) {
+                    Text("Zapisz")
+                }
+            }
+        )
+    }
 
     // Pobieranie naszego ukrytego klucza NASA z AndroidManifest.xml
     val apiKey = remember {
@@ -62,7 +88,18 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        // Przycisk Pobierz/Odśwież wymagany przez specyfikację
+        // --- OSOBISTE POWITANIE ---
+        if (!savedName.isNullOrEmpty()) { // Zmieniony warunek!
+            Text(
+                text = "Witaj, $savedName! \uD83D\uDE80",
+                fontSize = 28.sp,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+        }
+
+        // Przycisk Pobierz/Odśwież
         Button(onClick = { viewModel.fetchApod(apiKey) }) {
             Text("Pobierz / Odśwież Kosmiczne Zdjęcie")
         }
@@ -72,7 +109,7 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
         // Reagowanie na stan z ViewModelu
         when (val state = uiState) {
             is HomeUiState.Initial -> Text("Kliknij przycisk, aby nawiązać łączność z NASA!")
-            is HomeUiState.Loading -> CircularProgressIndicator() // Kręcące się kółko
+            is HomeUiState.Loading -> CircularProgressIndicator()
             is HomeUiState.Error -> Text(text = state.message, color = MaterialTheme.colorScheme.error)
             is HomeUiState.Success -> {
                 Text(
@@ -81,7 +118,7 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
                     textAlign = TextAlign.Center
                 )
                 Spacer(modifier = Modifier.height(16.dp))
-                // Wyświetlanie zdjęcia prosto z internetu dzięki bibliotece Coil
+
                 AsyncImage(
                     model = state.data.url,
                     contentDescription = state.data.title,
@@ -93,7 +130,6 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Button(onClick = {
-                    // Intencja otwierająca przeglądarkę z oficjalną stroną APOD
                     val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://apod.nasa.gov/apod/"))
                     try {
                         context.startActivity(intent)
@@ -105,7 +141,6 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
                 }
 
                 val stashViewModel: StashViewModel = viewModel()
-                // Stany do kontrolowania okienka i tekstu wpisywanego przez użytkownika
                 var showDialog by remember { mutableStateOf(false) }
                 var noteText by remember { mutableStateOf("") }
 
@@ -115,7 +150,6 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
                     Text("Dodaj do Schowka")
                 }
 
-                // Logika wyskakującego okienka
                 if (showDialog) {
                     AlertDialog(
                         onDismissRequest = { showDialog = false },
@@ -129,15 +163,14 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
                         },
                         confirmButton = {
                             Button(onClick = {
-                                // Zapisujemy z notatką!
                                 stashViewModel.addItem(
                                     title = state.data.title,
                                     url = state.data.url,
                                     date = state.data.date,
                                     note = noteText
                                 )
-                                showDialog = false // Zamykamy okienko
-                                noteText = "" // Czyścimy pole na przyszłość
+                                showDialog = false
+                                noteText = ""
                             }) {
                                 Text("Zapisz")
                             }
@@ -153,21 +186,18 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
         }
     }
 }
+
 @Composable
 fun StashScreen(viewModel: StashViewModel = viewModel()) {
     val items by viewModel.allItems.collectAsState(initial = emptyList())
     val context = LocalContext.current
 
-    // Stany do okienka
     var showCustomDialog by remember { mutableStateOf(false) }
     var customImageUri by remember { mutableStateOf("") }
     var customTitle by remember { mutableStateOf("Moje odkrycie") }
     var customNote by remember { mutableStateOf("") }
-
-    // Stan do trzymania tymczasowego linku aparatu
     var tempCameraUri by remember { mutableStateOf<Uri?>(null) }
 
-    // Wyrzutnia Galerii
     val galleryLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia()
     ) { uri ->
@@ -177,7 +207,6 @@ fun StashScreen(viewModel: StashViewModel = viewModel()) {
         }
     }
 
-    // Wyrzutnia Aparatu
     val cameraLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.TakePicture()
     ) { success ->
@@ -192,7 +221,6 @@ fun StashScreen(viewModel: StashViewModel = viewModel()) {
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Dwa przyciski obok siebie
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceEvenly
@@ -202,7 +230,7 @@ fun StashScreen(viewModel: StashViewModel = viewModel()) {
                 tempCameraUri = uri
                 cameraLauncher.launch(uri)
             }) {
-                Text("📷 Aparat")
+                Text("\uD83D\uDCF7 Aparat")
             }
 
             Button(onClick = {
@@ -210,7 +238,7 @@ fun StashScreen(viewModel: StashViewModel = viewModel()) {
                     PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
                 )
             }) {
-                Text("🖼️ Galeria")
+                Text("\uD83D\uDDBC\uFE0F Galeria")
             }
         }
 
@@ -247,7 +275,6 @@ fun StashScreen(viewModel: StashViewModel = viewModel()) {
         }
     }
 
-    // Okienko zapisu
     if (showCustomDialog) {
         AlertDialog(
             onDismissRequest = { showCustomDialog = false },
@@ -305,15 +332,13 @@ fun ContactScreen() {
         Text(text = "Masz pytania dotyczące naszej misji?")
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Przycisk uruchamiający intencję telefonu
         Button(onClick = {
             val intent = Intent(Intent.ACTION_DIAL).apply {
-                data = Uri.parse("tel:+48123456789") // Przykładowy numer
+                data = Uri.parse("tel:+48123456789")
             }
             try {
                 context.startActivity(intent)
             } catch (e: Exception) {
-                // Obsługa błędu, gdy system nie znajdzie aplikacji telefonu
                 Toast.makeText(context, "Brak aplikacji do dzwonienia!", Toast.LENGTH_SHORT).show()
             }
         }) {
@@ -323,8 +348,6 @@ fun ContactScreen() {
 }
 
 fun Context.createImageFileUri(): Uri {
-    // Tworzy unikalny plik w folderze cache z aktualną datą
     val file = File(cacheDir, "camera_image_${System.currentTimeMillis()}.jpg")
-    // Zwraca bezpieczny Uri przez nasz FileProvider
     return FileProvider.getUriForFile(this, "${packageName}.fileprovider", file)
 }
